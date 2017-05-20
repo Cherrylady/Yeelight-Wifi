@@ -3,7 +3,7 @@ require 'json'
 require 'timeout'
 
 class Yeelight
-
+    
     def initialize(host, port)
         @host = host
         @port = port
@@ -40,27 +40,49 @@ class Yeelight
     end
 
     # This method is used to change the color temperature of a smart LED.
+
     def set_ct_abx(ct_value, effect, duration)
         cmd = "{\"id\":2,\"method\":\"set_ct_abx\",\"params\":[#{ct_value},\"#{effect}\",#{duration}]}\r\n"
         request(cmd)
     end
 
+    def rbg_calc(a)
+        if a.length == 3 && a.each {|value| if value.between?(0,255) != true then abort("Value #{value} is not in the range 0-255") end}
+            a[0]*65536 + a[1]*256 + a[2]
+        else
+            abort("RGB needs 3 values in range 0 - 255!")
+        end        
+    end
+
     # This method is used to change the color RGB of a smart LED.
-    def set_rgb(rgb_value, effect, duration)
-        cmd = "{\"id\":3,\"method\":\"set_rgb\",\"params\":[#{rgb_value},\"#{effect}\",#{duration}]}\r\n"
+    def set_rbg(rbg_value, effect, duration)
+        rbg_value = rbg_calc(rbg_value.to_a)
+        cmd = "{\"id\":3,\"method\":\"set_rgb\",\"params\":[#{rbg_value},\"#{effect}\",#{duration}]}\r\n"
+        puts cmd
         request(cmd)
     end
 
     # This method is used to change the color HSV of a smart LED.
     def set_hsv(hue, sat, effect, duration)
-        cmd = "{\"id\":4,\"method\":\"set_hsv\",\"params\":[#{hue},#{sat},\"#{effect}\",#{duration}]}\r\n"
-        request(cmd)
+        if hue.between?(0, 356) != true
+            abort("Hue #{hue} is not in the range 0-356")
+        elsif sat.between?(0, 100) != true
+            abort("Sat #{sat} is not in the range 0-100")
+        else
+            cmd = "{\"id\":4,\"method\":\"set_hsv\",\"params\":[#{hue},#{sat},\"#{effect}\",#{duration}]}\r\n"
+            request(cmd)
+        end    
     end
+        
 
     # This method is used to change the brightness of a smart LED.
     def set_bright(brightness, effect, duration)
-        cmd = "{\"id\":5,\"method\":\"set_bright\",\"params\":[#{brightness},\"#{effect}\",#{duration}]}\r\n"
-        request(cmd)
+        if brightness.between?(1, 100) != true
+            abort("Brightness #{brightness} must be in range from 1 to 100")
+        else    
+            cmd = "{\"id\":5,\"method\":\"set_bright\",\"params\":[#{brightness},\"#{effect}\",#{duration}]}\r\n"
+            request(cmd)
+        end
     end
 
     # This method is used to switch on or off the smart LED (software managed on/off).
@@ -178,4 +200,14 @@ class Yeelight
 
         devices
     end
+
+    def police_alarm
+        while true
+            lamp.set_rbg([4, 0, 255], 'smooth', 300)
+            sleep(1)
+            lamp.set_rbg([228, 5, 5], 'smooth', 300)
+            sleep(1)
+        end
+    end
+
 end
